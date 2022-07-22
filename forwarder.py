@@ -5,6 +5,7 @@ import asyncio
 import os
 
 message = None
+image = None
 
 TG_API_ID = os.environ['TG_API_ID']
 TG_API_HASH = os.environ['TG_API_HASH']
@@ -37,6 +38,11 @@ for c in input_channels:
 @client.on(events.NewMessage(chats=input_channels))
 async def handler(event):
     print("handled tg new message:", event.message.message)
+
+    if hasattr(event.media, 'photo'):
+        await event.message.download_media(file='/app/img.jpg')
+        globals()['image'] = '/app/img.jpg'
+
     # If the message contains a URL, parse and send Message + URL
     try:
         parsed_response = (event.message.message + '\n' +
@@ -57,11 +63,17 @@ discord_client = discord.Client()
 
 async def background_task():
     global message
+    global image
+
     await discord_client.wait_until_ready()
-    discord_channel = discord_client.get_channel(DC_CHANNEL_ID)
+    channel = discord_client.get_channel(DC_CHANNEL_ID)
+
     while True:
+        if image:
+            await channel.send(file=discord.File('/app/img.jpg'))
+            image = None
         if message:
-            await discord_channel.send(message)
+            await channel.send(message)
             message = None
         await asyncio.sleep(0.1)
 
