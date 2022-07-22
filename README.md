@@ -32,7 +32,7 @@ docker run -it \
   -e DC_BOT_TOEKN="your discord bot token" \
   -e TG_CHANNEL_ID=1234567890 \
   -e DC_CHANNEL_ID=123456789012345678 \
-  kettan/tgdc-forwarder
+  kettan/tgdc-forwarder:latest
 
 python3 forwarder.py
 ```
@@ -46,7 +46,7 @@ docker run -it `
   -e DC_BOT_TOEKN="your discord bot token" `
   -e TG_CHANNEL_ID=1234567890 `
   -e DC_CHANNEL_ID=123456789012345678 `
-  kettan/tgdc-forwarder
+  kettan/tgdc-forwarder:latest
 
 python3 forwarder.py
 ```
@@ -60,7 +60,7 @@ docker run -it ^
   -e DC_BOT_TOEKN="your discord bot token" ^
   -e TG_CHANNEL_ID=1234567890 ^
   -e DC_CHANNEL_ID=123456789012345678 ^
-  kettan/tgdc-forwarder
+  kettan/tgdc-forwarder:latest
 
 python3 forwarder.py
 ```
