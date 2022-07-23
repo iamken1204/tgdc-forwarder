@@ -37,10 +37,10 @@ for c in input_channels:
 
 @client.on(events.NewMessage(chats=input_channels))
 async def handler(event):
-    print("handled tg new message:", event.message.message)
 
     if hasattr(event.media, 'photo'):
         await event.message.download_media(file='/app/img.jpg')
+        print("handled tg photo")
         globals()['image'] = '/app/img.jpg'
 
     # If the message contains a URL, parse and send Message + URL
@@ -52,6 +52,7 @@ async def handler(event):
     except:
         parsed_response = event.message.message
 
+    print("handled tg message:", event.message.message)
     globals()['message'] = parsed_response
 
 
