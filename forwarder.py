@@ -1,89 +1,65 @@
-from telethon import TelegramClient, events
-from telethon.tl.types import InputChannel
-import discord
 import asyncio
+from telethon import TelegramClient, events
+import discord
 import os
-
-message = None
-image = None
 
 TG_API_ID = os.environ['TG_API_ID']
 TG_API_HASH = os.environ['TG_API_HASH']
-DC_BOT_TOEKN = os.environ['DC_BOT_TOEKN']
+DC_BOT_TOKEN = os.environ['DC_BOT_TOKEN']
 DC_CHANNEL_ID = int(os.environ['DC_CHANNEL_ID'])
 TG_CHANNEL_ID = int(os.environ['TG_CHANNEL_ID'])
 
-"""
-Telegram Client
-"""
 client = TelegramClient("forwardgram", TG_API_ID, TG_API_HASH)
-client.start()
+discord_client = discord.Client(intents=discord.Intents.all())
+message_queue = asyncio.Queue()
+discord_ready = asyncio.Event()
 
-input_channels = []
-
-# Find targeted chats
-for d in client.iter_dialogs():
-    if d.entity.id == TG_CHANNEL_ID:
-        print("Input chat:", d.name, d.entity.id)
-        input_channels.append(InputChannel(d.entity.id, d.entity.access_hash))
-        break
-
-print("Monitored chat IDs:")
-for c in input_channels:
-    print("\t", c.channel_id)
-
-# Handle Telegram New Message Events
-
-
-@client.on(events.NewMessage(chats=input_channels))
+@client.on(events.NewMessage(chats=TG_CHANNEL_ID))
 async def handler(event):
-
     if hasattr(event.media, 'photo'):
         await event.message.download_media(file='/app/img.jpg')
-        print("handled tg photo")
-        globals()['image'] = '/app/img.jpg'
+        await message_queue.put(('/app/img.jpg', 'image'))
 
-    # If the message contains a URL, parse and send Message + URL
     try:
         parsed_response = (event.message.message + '\n' +
                            event.message.entities[0].url)
-        parsed_response = ''.join(parsed_response)
-    # Or we only send Message
     except:
         parsed_response = event.message.message
 
-    print("handled tg message:", event.message.message)
-    globals()['message'] = parsed_response
-
-
-"""
-Discord Client
-"""
-discord_client = discord.Client()
-
+    print(f"Got message: {parsed_response}")
+    await message_queue.put((parsed_response, 'text'))
+    print("Message added to queue.")
 
 async def background_task():
-    global message
-    global image
-
-    await discord_client.wait_until_ready()
+    await discord_ready.wait()
     channel = discord_client.get_channel(DC_CHANNEL_ID)
+    print("Background task running...")
 
     while True:
-        if image:
-            await channel.send(file=discord.File('/app/img.jpg'))
-            image = None
-        if message:
+        message, msg_type = await message_queue.get()
+        if msg_type == 'text' and message == '':
+            continue
+        if message is None:
+            continue
+        print(f"Sending {msg_type}: {message}")
+        if msg_type == 'image':
+            await channel.send(file=discord.File(message))
+        else:
             await channel.send(message)
-            message = None
-        await asyncio.sleep(0.1)
 
-discord_client.loop.create_task(background_task())
+@discord_client.event
+async def on_ready():
+    print("Discord client ready.")
+    discord_ready.set()
 
+async def main():
+    await client.start()
+    client_task = asyncio.create_task(client.run_until_disconnected())
 
-"""
-Main process
-"""
-print("Listening now")
-asyncio.run(discord_client.run(DC_BOT_TOEKN))
-asyncio.run(client.run_until_disconnected())
+    discord_client_task = asyncio.create_task(discord_client.start(DC_BOT_TOKEN))
+    background_task_task = asyncio.create_task(background_task())
+
+    await asyncio.gather(client_task, discord_client_task, background_task_task)
+
+if __name__ == '__main__':
+    asyncio.run(main())
